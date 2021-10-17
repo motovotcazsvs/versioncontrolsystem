@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>ViewMain.qml</file>
+        <file>ViewProjectsOnline.qml</file>
+        <file>ViewProjectsOffline.qml</file>
+    </qresource>
+</RCC>
