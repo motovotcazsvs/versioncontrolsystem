@@ -1,6 +1,7 @@
 #include "control.h"
 #include <QDebug>
 
+
 #define COUNTELEMENTS 15
 #define COUNTLISTREPOSITORIES 15
 
@@ -207,6 +208,9 @@ void Control::setBufferElements(QStringList &listElements, int position_add_elem
 void Control::requestGetRepositories()
 {
     //просим в сервера 100 элементов
+    QByteArray byte("03010`15`");
+    //byte.append(0x12d);
+    obj_tcpip.writeFrame(byte);
 }
 
 //функция для поддержевания размера буфера не больше 200 элементов

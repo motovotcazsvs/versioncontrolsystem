@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QVector>
+#include "tcpipastm.h"
 
 class Control : public QObject
 {
@@ -29,6 +30,8 @@ private:
     int enter_element;
     int current_element_repositories;
     QVector<QString> vector_elements;
+    tcpipastm obj_tcpip;
+
 
 private:
     void setPositionElements();

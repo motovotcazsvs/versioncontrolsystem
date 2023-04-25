@@ -16,6 +16,7 @@ public:
 //    void highASTM(QString &, QString, QString, QString, QString, QString, int, QString, int);
 //    void connectToServer();
 //    void disconnectToServer();
+    void writeFrame(const QByteArray &);
 
 
 signals:
@@ -31,7 +32,7 @@ private slots:
 private:
 //    bool checkComand(quint8);
 //    void transmittingFrame();
-    void writeFrame(const QByteArray &);
+    //void writeFrame(const QByteArray &);
 //    quint8 createCheckSum(const QByteArray &);
     void writeComand(quint8);
 //    void changeToNeutralTransmit();

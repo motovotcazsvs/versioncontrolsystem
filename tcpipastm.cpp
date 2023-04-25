@@ -41,7 +41,7 @@ tcpipastm::tcpipastm(QObject *parent) : QObject(parent)
 //    QObject::connect(timer_tcpip, &QTimer::timeout, this, &tcpipastm::timeOutTimerTcpip);
 //    QObject::connect(this, &tcpipastm::signalState, this, &tcpipastm::stateASTM);
 
-
+    socket->connectToHost("192.168.1.106",44);
 }
 
 //void tcpipastm::sendToServer(QString &str)
@@ -161,8 +161,8 @@ void tcpipastm::slotReadyRead()
 {
     //qDebug() << "slotReadyRead()";
     QByteArray current_received;
-    current_received.clear();
     current_received = socket->readAll();
+    qDebug() << "slotReadyRead()" << current_received;
 
 //    for(int i = 0; i < current_received.length(); i++){
 //        if(current_received[i] == ENQ || current_received[i] == ACK || current_received[i] == EOT || current_received[i] == NAK || current_received[i] == STX){
