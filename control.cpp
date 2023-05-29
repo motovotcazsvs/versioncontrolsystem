@@ -250,7 +250,6 @@ void Control::getRepositoriesUPDOWN(int up_or_down)
     setBufferElements(list_repositories, up_or_down);//добавляем начальные 100 элементов
 }
 
-//edit vscode
 
 
 
