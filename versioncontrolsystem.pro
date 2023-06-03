@@ -5,7 +5,8 @@ CONFIG += c++11
 
 SOURCES += main.cpp \
     control.cpp \
-    tcpipastm.cpp
+    tcpipastm.cpp \
+    actions.cpp
 
 RESOURCES += qml.qrc
 
@@ -21,4 +22,5 @@ include(deployment.pri)
 
 HEADERS += \
     control.h \
-    tcpipastm.h
+    tcpipastm.h \
+    actions.h

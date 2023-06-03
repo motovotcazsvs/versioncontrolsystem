@@ -30,16 +30,16 @@ private:
     int enter_element;
     int current_element_repositories;
     QVector<QString> vector_elements;
-    tcpipastm obj_tcpip;
+    tcpipastm *obj_tcpip;
 
 
 private:
     void setPositionElements();
     int getPositionElement(int &, int);
     void setBufferElements(QStringList &, int);
-    void requestGetRepositories();
+    void requestGetRepositories(QString);
     void clearBeginningBuffer(int);
-    void getRepositoriesUPDOWN(int);
+    void getRepositoriesUPDOWN(int, int);
 };
 
 #endif // CONTROL_H

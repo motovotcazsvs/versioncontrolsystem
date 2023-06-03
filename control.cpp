@@ -4,6 +4,9 @@
 
 #define COUNTELEMENTS 15
 #define COUNTLISTREPOSITORIES 15
+#define delimiter '`'//розделитель
+
+QString parsingNumDelimiter(QString, int);//парсим данные до разделителя(не включая код действия) по счету от 1 и тд
 
 Control::Control(QObject *parent) : QObject(parent)
 {
@@ -23,6 +26,12 @@ Control::Control(QObject *parent) : QObject(parent)
     enter_element = 0;
     current_element_repositories = 0;
 
+    obj_tcpip = new tcpipastm;
+    QObject::connect(obj_tcpip, &tcpipastm::signalReceivedRepositories, this, &Control::slotGetRepositories);
+    QObject::connect(obj_tcpip, &tcpipastm::signalReceivedRepositoriesUP, this, &Control::slotGetRepositoriesUP);
+    QObject::connect(obj_tcpip, &tcpipastm::signalReceivedRepositoriesDOWN, this, &Control::slotGetRepositoriesDOWN);
+
+
 }
 
 bool Control::commandOrRepository(QString element)
@@ -37,12 +46,19 @@ void Control::setControlUp()
 {
     int count_elements = vector_elements.count();
     //если крайний элемент меню это последний элемент в буфере
-    if(enter_element >= (count_elements - 1 - 3)){
-        requestGetRepositories();//то сделать запрос на прием 100 репозиториив
-        slotGetRepositoriesUP();
+    if(enter_element >= (count_elements - 1 - 3)){ 
+        QString str_frame("0303");
+        str_frame.append(QString::number(current_element_repositories));
+        str_frame.append("`");
+        str_frame.append(QString::number(COUNTLISTREPOSITORIES));
+        str_frame.append("`");
+        requestGetRepositories(str_frame);//то сделать запрос на прием 100 репозиториив
+        qDebug() << "отправляем запрос на получение репозиториив идя ВВЕРХ";
         return;
     }
 
+    qDebug() << "setControlUp()" << enter_element;
+    for(int i = 0; i < vector_elements.count(); i++) qDebug() << vector_elements[i];
     //если это последний элемент в буфере и текущий элемент менше 100 и больше количества команд
     getPositionElement(++enter_element, count_elements);//то
     setPositionElements();
@@ -56,8 +72,12 @@ void Control::setControlDown()
     int count_elements = vector_elements.count();
     //если крайний элемент меню это первый элемент в буфере
     if(enter_element == 3){//
-        requestGetRepositories();//то сделать запрос на прием 100 репозиториив
-        slotGetRepositoriesDOWN();
+        QString str_frame("0305");
+        str_frame.append(QString::number(current_element_repositories));
+        str_frame.append("`");
+        str_frame.append(QString::number(COUNTLISTREPOSITORIES));
+        str_frame.append("`");
+        requestGetRepositories(str_frame);//то сделать запрос на прием 100 репозиториив
         return;
     }
 
@@ -89,94 +109,116 @@ void Control::setPositionElements()
 //
 void Control::started()
 {
-    requestGetRepositories();//отправляем запрос на прием репозиториив
+    QString str_frame;
 
-    //добавляем в буфер вывода команды если не пролистали 100 элементов
-    if(current_element_repositories < COUNTELEMENTS){// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        if(vector_elements.isEmpty() == false) return;//
-        setBufferElements(list_commands, 0);//записываем в буфер команды
+    if(current_element_repositories == 0 && enter_element < 3){
+        str_frame.append("0307");
+        str_frame.append(QString::number(current_element_repositories));
+        str_frame.append("`");
+        str_frame.append(QString::number(COUNTLISTREPOSITORIES));
+    }
+    else if(current_element_repositories == 0 && enter_element >= 3){
+        str_frame.append("0301");
+        str_frame.append(QString::number(current_element_repositories));
+        str_frame.append("`");
+        str_frame.append(QString::number(COUNTLISTREPOSITORIES));
+
+
+    }
+    else if(current_element_repositories >= COUNTLISTREPOSITORIES){
+        str_frame.append("0301");
+        str_frame.append(QString::number(current_element_repositories));
+        str_frame.append("`");
+        str_frame.append(QString::number(COUNTLISTREPOSITORIES + COUNTLISTREPOSITORIES));
     }
 
+    str_frame.append("`");    
+    requestGetRepositories(str_frame);//отправляем запрос на прием репозиториив
+
+    //добавляем в буфер вывода команды, что бы для начала было хоть чтото
+    if(current_element_repositories < COUNTLISTREPOSITORIES){// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if(vector_elements.isEmpty() == false) return;//
+        setBufferElements(list_commands, 0);//записываем в конец буфера команды
+    }
+
+
     setPositionElements();//выводим элементы в меню
-    slotGetRepositories();
 }
 
 //
 void Control::slotGetRepositories()
 {
     list_repositories.clear();
-    //list_repositories << "analyzerGL10";
-    //list_repositories << "versioncontrolsystem";
-    list_repositories << "GL01";
-    list_repositories << "version02";
-    list_repositories << "GL03";
-    list_repositories << "version04";
-    list_repositories << "GL05";
-    list_repositories << "version06";
-    list_repositories << "GL07";
-    list_repositories << "version08";
-    list_repositories << "GL09";
-    list_repositories << "version010";
-    list_repositories << "GL011";
-    list_repositories << "version012";
-    list_repositories << "version013";
-    list_repositories << "GL014";
-    list_repositories << "version015";
+    QString dat_received = obj_tcpip->getDataReceived();
+    dat_received = dat_received.mid(4);
+    QString str_count_repositories = parsingNumDelimiter(dat_received, 1);
+    int count_repositories = str_count_repositories.toInt();
 
-    //если буфер пуст то сначала загрузить в него команды а потом репозитории
+    if(enter_element >= 3){
+        current_element_repositories += count_repositories;
+    }
+
+    for(int i = 0; i < count_repositories; i++){
+        QString rep = parsingNumDelimiter(dat_received, i + 2);
+        list_repositories << rep;
+    }
+
+    //если в буфер не успели загрузится команды до ответа сервера то загрузить их
     if(vector_elements.isEmpty()){
         setBufferElements(list_commands, 0);
     }
-    setBufferElements(list_repositories, 0);
+
+    if(enter_element < 3 && current_element_repositories < COUNTLISTREPOSITORIES){
+        setBufferElements(list_repositories, COUNTLISTREPOSITORIES);
+        enter_element += count_repositories;
+    }
+    else if(enter_element >= 3 && current_element_repositories < COUNTLISTREPOSITORIES){// !!!!!!!!!!!!!!
+        setBufferElements(list_repositories, 0);
+    }
+    else if(current_element_repositories >= COUNTLISTREPOSITORIES){
+        vector_elements.clear();//очищяем команды
+        setBufferElements(list_repositories, 0);
+    }
+
     setPositionElements();
 }
 
 //
 void Control::slotGetRepositoriesUP()
 {
+    qDebug() << "прииняли репозитории по управлению вверх!";
     list_repositories.clear();//очищаем список для добавления новых репозиториив
-    list_repositories << "GL1";
-    list_repositories << "version2";
-    list_repositories << "GL3";
-    list_repositories << "version4";
-    list_repositories << "GL5";
-    list_repositories << "version6";
-    list_repositories << "GL7";
-    list_repositories << "version8";
-    list_repositories << "GL9";
-    list_repositories << "version10";
-    list_repositories << "GL11";
-    list_repositories << "version12";
-    list_repositories << "version13";
-    list_repositories << "GL14";
-    list_repositories << "version15";
+    QString dat_received = obj_tcpip->getDataReceived();
+    dat_received = dat_received.mid(4);
+    QString str_count_repositories = parsingNumDelimiter(dat_received, 1);
+    int count_repositories = str_count_repositories.toInt();
+    if(count_repositories == 0){
+        //current_element_repositories = 0;
+        qDebug() << "больше нету элементов вверху";
+    }
+    else current_element_repositories += count_repositories;
+    for(int i = 0; i < count_repositories; i++){
+        QString rep = parsingNumDelimiter(dat_received, i + 2);
+        list_repositories << rep;
+    }
 
-    getRepositoriesUPDOWN(0);
-
+    getRepositoriesUPDOWN(0, count_repositories);
     setControlUp();//возвращаемся для перехода на следующи выбраный элемент
 }
 
 void Control::slotGetRepositoriesDOWN()
 {
     list_repositories.clear();//очищаем список для добавления новых репозиториив
-    list_repositories << "version15";
-    list_repositories << "GL14";
-    list_repositories << "version13";
-    list_repositories << "version12";
-    list_repositories << "GL11";
-    list_repositories << "version10";
-    list_repositories << "GL9";
-    list_repositories << "version8";
-    list_repositories << "GL7";
-    list_repositories << "version6";
-    list_repositories << "GL5";
-    list_repositories << "version4";
-    list_repositories << "GL3";
-    list_repositories << "version2";
-    list_repositories << "GL1";
-
-    getRepositoriesUPDOWN(COUNTLISTREPOSITORIES);
-
+    QString dat_received = obj_tcpip->getDataReceived();
+    dat_received = dat_received.mid(4);
+    QString str_count_repositories = parsingNumDelimiter(dat_received, 1);
+    int count_repositories = str_count_repositories.toInt();
+    current_element_repositories -= count_repositories;
+    for(int i = 0; i < count_repositories; i++){
+        QString rep = parsingNumDelimiter(dat_received, i + 2);
+        list_repositories << rep;
+    }
+    getRepositoriesUPDOWN(COUNTLISTREPOSITORIES, count_repositories);
     setControlDown();//возвращаемся для перехода на следующи выбраный элемент
 }
 
@@ -205,12 +247,12 @@ void Control::setBufferElements(QStringList &listElements, int position_add_elem
     }
 }
 
-void Control::requestGetRepositories()
+void Control::requestGetRepositories(QString frame)
 {
     //просим в сервера 100 элементов
-    QByteArray byte("03010`15`");
-    //byte.append(0x12d);
-    obj_tcpip.writeFrame(byte);
+    QByteArray byte;
+    byte.append(frame);
+    obj_tcpip->writeFrame(byte);
 }
 
 //функция для поддержевания размера буфера не больше 200 элементов
@@ -220,7 +262,9 @@ void Control::clearBeginningBuffer(int start_remove)
     for(int i = 0; i < vector_elements.count(); i++) qDebug() << vector_elements[i];
 
     int count_elements = vector_elements.count();
-    if(count_elements < COUNTLISTREPOSITORIES + list_commands.count()) return;//если мало элементов то не очищать буфер
+    if(count_elements < COUNTLISTREPOSITORIES + list_commands.count()){
+        if(count_elements <= COUNTLISTREPOSITORIES) return;//если мало элементов то не очищать буфер
+    }
     vector_elements.remove(start_remove, count_elements - COUNTLISTREPOSITORIES);//оставляем 100 элементов
 
     //выбраный элемент меняет номер позиции в буфере, изза очистки
@@ -236,20 +280,41 @@ void Control::clearBeginningBuffer(int start_remove)
 
 }
 
-void Control::getRepositoriesUPDOWN(int up_or_down)
+void Control::getRepositoriesUPDOWN(int up_or_down, int count_new_repositories)
 {
     //если пришли репозитории то увеличить текущий элемент репозиториив на количество принятых репозиториив
     //иначе возвращаемся в начало списка элементов, а именно к командам
     clearBeginningBuffer(up_or_down);//оставляем в буфере 100 последних элементов
-    bool no_new_repositories = false;//нету новых репозиториив
+
+    bool no_new_repositories = false;//есть новые репозитории
+    if(count_new_repositories == 0) no_new_repositories = true;//если нету новых репозиториив
+
     if(no_new_repositories){
+        qDebug() << "getRepositoriesUPDOWN() нету новых репозиториив";
         current_element_repositories = 0;
-        if(list_repositories.isEmpty() == false) setBufferElements(list_commands, up_or_down);//добавляем команды если их нету у буфере
+        setBufferElements(list_commands, up_or_down);//добавляем команды если их нету у буфере
+
+        return;// !!!!!!!!
     }
 
     setBufferElements(list_repositories, up_or_down);//добавляем начальные 100 элементов
 }
 
-
-
+QString parsingNumDelimiter(QString str, int num)//парсим данные до разделителя(не включая код действия) по счету от 1 и тд
+{
+    //"2`15.89`7.5`";
+    int i = 1;
+    QString temp_str;
+    foreach (QChar s, str){
+        if(s == delimiter && i == num){
+            break;
+        }
+        else if(s == delimiter){
+            i++;
+            temp_str = "";
+        }
+        else temp_str += s;
+    }
+    return temp_str;
+}
 

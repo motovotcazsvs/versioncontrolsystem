@@ -162,8 +162,17 @@ void tcpipastm::slotReadyRead()
     //qDebug() << "slotReadyRead()";
     QByteArray current_received;
     current_received = socket->readAll();
+    data_received = current_received;
     qDebug() << "slotReadyRead()" << current_received;
-
+    if(current_received.contains("0302")){
+        emit signalReceivedRepositories();
+    }
+    else if(current_received.contains("0304")){
+        emit signalReceivedRepositoriesUP();
+    }
+    else if(current_received.contains("0306")){
+        emit signalReceivedRepositoriesDOWN();
+    }
 //    for(int i = 0; i < current_received.length(); i++){
 //        if(current_received[i] == ENQ || current_received[i] == ACK || current_received[i] == EOT || current_received[i] == NAK || current_received[i] == STX){
 //            if(arr_receivedData[0] == EOT && current_received[i] == ENQ){
@@ -360,3 +369,7 @@ void tcpipastm::writeComand(quint8 comand)
 //    //qDebug() << "changeToNeutralTransmit()!!";
 //}
 
+QString tcpipastm::getDataReceived()
+{
+    return data_received;
+}

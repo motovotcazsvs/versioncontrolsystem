@@ -17,10 +17,14 @@ public:
 //    void connectToServer();
 //    void disconnectToServer();
     void writeFrame(const QByteArray &);
+    QString getDataReceived();
 
 
 signals:
 //    void signalState();
+    void signalReceivedRepositories();
+    void signalReceivedRepositoriesUP();
+    void signalReceivedRepositoriesDOWN();
 
 public slots:
 
@@ -40,6 +44,7 @@ private:
 
 private:
     QTcpSocket *socket;
+    QString data_received;
 //    enum statesProtocolTcpIp{
 //        NEUTRAL,
 //        ESTABLISHMENT,
